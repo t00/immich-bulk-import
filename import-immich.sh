@@ -42,14 +42,22 @@ if [ -n "$DRY" ] && [ "$MODE" != "verify" ]; then
 fi
 
 if [ "$MODE" = "verify" ]; then
+  echo "Hashing every file under $SRC and comparing with the server." >&2
+  echo "On a large library this takes a while." >&2
+
   # No --album/--album-name here: updateAlbums() returns early without them,
   # which keeps this pass strictly read-only.
+  #
+  # --no-progress because the CLI's progress bars only render on a TTY, and
+  # capturing output for parsing makes stdout a pipe. Without it there is no
+  # feedback at all during the hash. tee keeps a copy for the parser while awk
+  # forwards the chatter live, dropping the JSON block (which would otherwise
+  # dump every filename to the terminal).
   out=$(mktemp)
-  if ! immich upload --recursive --dry-run --json-output "$@" "$SRC" >"$out" 2>&1; then
-    cat "$out" >&2
-    rm -f "$out"
-    exit 1
-  fi
+  immich upload --recursive --dry-run --json-output --no-progress "$@" "$SRC" 2>&1 \
+    | tee "$out" \
+    | awk '/^\{$/ { injson = 1 } injson { if (/^\}$/) injson = 0; next } NF' >&2
+
   node /opt/immich/verify.mjs <"$out"
   rc=$?
   rm -f "$out"

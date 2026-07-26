@@ -113,6 +113,10 @@ checked 5 local file(s)
 Exit status is 0 when everything is present, 1 when something is missing, so
 `./run.sh --verify /srv/photos && echo clean` works in a script.
 
+Every file is hashed locally before the server is queried, so on a large
+library expect a long quiet stretch after `Received N files (X GB), hashing...`
+appears. That line confirms it is working and tells you the size of the job.
+
 This is a **checksum** comparison, not a filename match — the CLI hashes every
 local file and queries the server's bulk-upload-check API. A renamed or moved
 file still counts as present; a locally edited one correctly shows as missing.
@@ -249,6 +253,12 @@ directory and set `IMMICH_CA_CERT=ca.crt`.
 
 **Everything reported as new, nothing uploaded**
 Check you have not enabled `--skip-hash`.
+
+**`--verify` prints nothing for a long time**
+Normal on a large library — it hashes every file before querying the server.
+You should see `Received N files (X GB), hashing...` within the first minute;
+if not, check the mounted path is what you expect (`.` means your *current*
+directory, not the script's).
 
 ## Notes
 
