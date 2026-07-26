@@ -58,7 +58,9 @@ if [ "$MODE" = "verify" ]; then
     | tee "$out" \
     | awk '/^\{$/ { injson = 1 } injson { if (/^\}$/) injson = 0; next } NF' >&2
 
-  node /opt/immich/verify.mjs <"$out"
+  # NODE_OPTIONS= : the parser makes no network calls, so skip the mTLS preload
+  # rather than printing a second, misleading "mTLS enabled" line.
+  NODE_OPTIONS= node /opt/immich/verify.mjs <"$out"
   rc=$?
   rm -f "$out"
   exit $rc

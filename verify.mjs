@@ -10,19 +10,23 @@ const MOUNT = '/import';
 let buf = '';
 for await (const chunk of process.stdin) buf += chunk;
 
-// Progress lines precede the JSON, which is pretty-printed so its opening
-// brace sits alone on a line. Anchoring on that is sturdier than dropping a
-// fixed number of leading lines.
+// The JSON is pretty-printed, so its opening and closing braces each sit alone
+// at column 0 -- anchor on those. Chatter appears BOTH before it ("hashing...")
+// and after it ("Would have deleted 0 local assets"), so the closing brace has
+// to be found rather than assuming the JSON runs to end of output.
 const start = buf.search(/^\{$/m);
 if (start < 0) {
   console.error('verify: no JSON found in CLI output. Raw output follows:\n');
   console.error(buf.trim());
   process.exit(2);
 }
+const rest = buf.slice(start);
+const end = rest.search(/^\}$/m);
+const json = end < 0 ? rest : rest.slice(0, end + 1);
 
 let data;
 try {
-  data = JSON.parse(buf.slice(start));
+  data = JSON.parse(json);
 } catch (e) {
   console.error(`verify: could not parse CLI output: ${e.message}`);
   process.exit(2);
